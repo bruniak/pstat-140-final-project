@@ -1,0 +1,513 @@
+---
+title: "140 Final Project"
+author: "Kevin Brunia"
+date: "2025-07-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(dplyr)
+library(SixSigma)
+library(ggplot2)
+library(qicharts2)
+library(qcc)
+library(base)
+library(graphics)
+
+```
+
+
+## Course Scenario:
+I am employed by the University of Santa Barbara to work at the De La Guerra Dining Hall. I have been working there since the winter quarter of 2025. At work, I do various tasks like serving, dish, bussing, and custodial positions. The dining hall serves students and guests alike for breakfast/lunch/dinner on weekdays and brunch/dinner on the weekends. I have been working every weekday this summer, so I have really gotten to know the ins and outs of the job. The particular process I would like to delve into at DLG is the roasting machine, which will be further explored in the case study below. For now, effective management of quality requires the execution of three activities: 
+
+*Quality Planning*- Establishing quality objectives and processes. Tools required for this part: Flowchart, SIPOC, CTQ identification.
+
+*Quality Assurance*- Preventing defects through process design. Tools required for this part: Cause and Effect diagram, Demerit system, out-of-control action plan.
+
+*Quality Control and Improvement*- Monitoring outputs and implementing corrections. Tools required for this part: Control charts, Check sheets, defect concentration diagram, Pareto analysis, Value Stream Map.
+
+## Case Study
+As previously mentioned, I have worked the numerous number of machines that are housed in the DLG dining hall. I work in the dish room a lot, and thought it useful to do SPC on a problem that has come up with the hobart cleaner that we have. This large machine is an aggregate consisting of 3 chambers of equal size, with a conveyer belt of rubbery spikes (to hold the dishes and various kitchen items up). The machine takes in dirty items and cleans them with intense heat and water pressure. We measure product quality by samples that are taken every hour, with the data on known analyses contained in an excel file. Quality is measured on a scale from 200 to 400, determined by the people outside of my knowledge (how clean the outputs are). The file indicates the time of sampling, and the sample is taken at the exit of the machine. The problem is that the quality range is quite large and can vary, so we would like to investigate the data and conduct SPC to hopefully get cleaner kitchen items. 
+
+Although the issue I am trying to tackle is specific towards one dining place, the place receives visits up to a thousand by the day, which is a lot of people using the plates/bowls/cups. By figuring out the best way to improve the machine, the results will hopefully improve the sanitation of the products and guest satisfaction. In addition, the university has a total of 3 unique dining halls with this machine, so the problem can be addressed in a broader context.
+
+
+## DMAIC Process
+
+### Define
+The problem is that the quality range is quite large and can vary, so we would like to investigate the data and conduct SQC to hopefully get cleaner kitchen items. We are looking for the opportunity to optimizing performance and achieving better results. The goal of this project is to present a substantial paper about a real world application of the concepts I learned in PSTAT 140. The internal customers, myself included, are the people and departments of DLG that rely on efficient processes of each other and the tools used for the job. The external customers (guests) expect a quality product, which is good food and kitchenware.
+
+*Project Charter*: The improvement will be defined in 4 ways. The focus is on the cleaning machine, since that is the sole place we get the data from. The scope is a little bit broader, since the input of the machine, the dishes and various items, will be output to the rest of the kitchen and throughout the dining hall. The direction of improvement is up and positive. Finally, the motivation for improvement are the guests/employees who dine there. The dish room plays a pivotal role in the dining cycle, so there is a valid reason behind this project. 
+
+Voice of the Customer (VoC): University dining hall -> good service
+
+critical-to-quality characteristics (CTQ): Sufficient dish quality ($\geq 363$)
+
+Below is a flowchart for the process.
+\vspace{2\baselineskip}
+
+![DLG Dish Process Flowchart](vaflowchart.png)
+\vspace{3\baselineskip}
+
+#### SIPOC diagram
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Define process elements
+steps <- c("Place items on conveyor", "Retrieve items", "Stack in carts")
+inputs.overall <- c("Kitchenware", "Water", "Energy")
+outputs.overall <- "Clean Items"
+
+# Input-output relationships
+input.output <- list(
+  c("Dishes", "Various tools", "Utensils"),
+  c("Dish gloves", "Cleaned dishes"),
+  c("Cart", "Clean Dishes")
+)
+
+# Add parameter and feature to each step
+x.parameters <- list(
+  list(c("Operator", "C")),  # Added parameter for Step 1
+  list(c("Clean time", "P"), c("Water temperature", "C")),
+  list(c("Placement technique", "P"), c("Dinnerware size", "C"))
+)
+
+y.features <- list(
+  list(c("Materials ready", "Cr")),  # Added feature for Step 1
+  list(c("Hot", "Cr"), c("Clean", "Cr"), c("Correct arrangement", "Cr")),
+  list(c("Correct stack", "Cr"))
+)
+
+#SIPOC diagram
+ss.pMap(steps, inputs.overall, outputs.overall,
+        input.output, x.parameters, y.features,
+        sub = "DLG Dish Room Process")
+```
+
+
+\vspace{2\baselineskip}
+
+Tollgate: 
+
+1. Yes, the problem statement focus is on symptoms
+
+2. All the key stakeholders are identified
+
+3. Most of the lost %C&A lies between the walk towards the trayveyor and loading the dish carts, which represents a value opportunity
+
+4. The scope of the project has been verified
+
+5. The SIPOC diagram is completed
+
+6. We are not ignoring any obvious barriers/obstacles to successful completion
+
+7. Action plan for Measure step seems reasonable
+\vspace{2\baselineskip}
+
+### Measure
+In this step, we are trying to evaluate and determine the present process state. Firstly, the KPIV (key process input variables) are the hobart machine and the dishes properly placed side by side in the same row. The KPOV (dish cleanliness) is therefore determined by the KPIV. Dish cleanliness is related to customer satisfaction as they expect it and want eat food from a non-contaminated eating item. The data is collected from sampling and observational studies. We sample the stuff that comes out the machine and study them to deem its quality. To select from 1 of the 4 data collection techniques, I would label the data collection under a check sheet. 
+\vspace{2\baselineskip}
+
+![DLG Process Check Sheet](check sheet.png)
+\vspace{2\baselineskip}
+
+#### Pareto Chart
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Create a vector of the defects
+dlg_defects <- c(208,10,32,5,7,52,21,14,9) 
+#Vector of names of defects
+names(dlg_defects) <- c("noisy", "price", "tasteless", "freshness", "salty", 
+                        "dirty dishes", "wait", "atmosphere", 
+                        "small portions")
+#Create pareto chart
+pareto.chart(dlg_defects, 
+             ylab="frequency",
+             ylab2="cumulative percentage",
+             main="Pareto Chart for DLG Defects",
+             cumperc = seq(0,100, by=20))
+```
+Close to 80% of the complains come from the first two complaint types, the place being too noisy and the the dishes/utensils being not entirely clean upon retrieval.
+
+Below is the defect concentration diagram for the Hobart machine. The squares are dirt, the triangles marks, and the circles flaws.
+
+
+![Hobart Machine Defect Concentration](defectconcentration.png)
+\vspace{2\baselineskip}
+
+Tollgate: 
+
+1. Value stream map is present. Steps and activities identified, and appropriate areas for queues and work-in-process levels reported.
+
+2. KPIV and KPOV included. 
+
+3. Measurement systems capability documented. 
+
+4. Assumptions made during data collection are note (ex. each day of data collection is independent of each other) 
+
+5. The team is capable of responding to any inquiry pertaining to the measurement system.
+\vspace{2\baselineskip}
+
+### Analyze
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+cause.and.effect(cause=list(machines=c("internal", "external", "extra play"),
+                            materials=c("supplier side", "handling"),
+                            methods=c("wrong work sequence", "planning", "materials handling"),
+                            measurement=c("Incorrect specs", "faulty gauge"),
+                            personnel=c("long hours", "insufficient training")),
+                 effect="Loss of Customers")
+```
+\vspace{2\baselineskip}
+
+Common/chance cause:
+Minor differences in scrapper/loader technique. 
+Dropping plates/cups. 
+These are just two of many causes, but they are of minimal impact and not feasible to eliminate.
+
+Assignable cause: Hobart malfunction or breakdown; unexpected events that interrupt the dish room. These are the only ones that came to mind, but they can have a significant impact. These are feasible to eliminate, however.
+
+#### Demerit System
+
+*Class A Defects*—Very Serious. The machine is either completely unfit for service, or will fail in service in such a manner that cannot be easily corrected in the field, or will cause personal injury or property damage. (noise, dirty dishes)
+
+*Class B Defects*—Serious. The unit will possibly suffer a Class A operating failure, or will certainly cause somewhat less serious operating problems, or will certainly have reduced life or increased maintenance cost. (taste discomfort, wait time)
+
+*Class C Defects*—Moderately Serious. The unit will possibly fail in service, or cause trouble that is less serious than operating failure, or possibly have reduced life or increased maintenance costs, or have a major defect in finish, appearance, or quality of work. (atmosphere, price)
+
+*Class D Defects*—Minor. The unit will not fail in service but has minor defects in finish, appearance, or quality of work. (small portions, salty/freshness)
+
+*Weight* (2 defects/class) : $d_i$ = (100 * 2) + (50 * 2) + (10 * 2) + (1 * 2) = 322
+
+This is the standard allocation of weights in statistical processes, so it applies to this scenario.
+\vspace{2\baselineskip}
+
+*Normality*: Below is the data for a sample of 100 dishes, with each one given a quality score. We are testing for normality, which influences the control charts and process capability.
+```{r, message=FALSE, warning=FALSE}
+dish_quality <- c(
+315, 247, 396, 330, 315, 250, 271, 315, 311, 328,
+255, 336, 367, 292, 304, 285, 226, 312, 298, 300,
+313, 324, 292, 310, 331, 296, 298, 321, 310, 315,
+357, 293, 308, 371, 344, 378, 313, 295, 324, 320,
+270, 281, 326, 278, 273, 346, 281, 351, 387, 348,
+318, 317, 350, 300, 310, 326, 384, 330, 300, 307,
+310, 331, 258, 349, 358, 314, 330, 324, 328, 260,
+284, 315, 237, 308, 285, 319, 315, 303, 304, 330,
+349, 264, 314, 317, 333, 285, 322, 337, 324, 319,
+265, 368, 321, 343, 327, 340, 333, 308, 325, 301)
+```
+
+Mean and standard deviation
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+mean(dish_quality)
+sd(dish_quality)
+
+#check normality
+qqnorm(dish_quality, pch = 1, frame = FALSE)
+qqline(dish_quality, col = "steelblue", lwd = 2)
+
+#histogram 
+hist(dish_quality)
+
+#Shapiro-Wilk Test
+shapiro.test(dish_quality)
+```
+
+We get a mean quality score of 314.06 and a standard deviation of around 32.02. Doing a Shapiro-Wilk test for a small sample, we get a p-value of 0.2515. This is pretty high (above 0.05), so the data is likely normally distributed. Looking at the qqplot, we can see that the data fits the line somewhat well. The histogram gives us a more confident result, showing normality in the distribution. 
+
+The kitchenware quality coming out of the machine was collected in 20 samples (m) of size n=5. Since we chose a sample size of 5 in each subgroup, we should construct an $\bar x$ and R chart. R better detects larger process shifts in variability, which is the target for the process in question. Now to construct them:
+
+*Control Charts*: Control charts are a crucial part of the analyze step. In this process, we will produce a $\bar x$-R charts.
+\vspace{2\baselineskip}
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+quality_sample <- rep(1:20, rep(5, 20))
+quality_group <- qcc.groups(dish_quality, quality_sample)
+summary(qcc(quality_group, "xbar"))
+summary(qcc(quality_group, "R"))
+```
+
+Now that we constructed both charts, they look good from a quick inspection. Let's go over the Western Electric Rules and the other sensitizing rules to determine if the process is in control. 
+
+1. Neither chart has one or more points outside the control limits
+
+2. For $\bar x$, there are some points on the $2 \sigma$ warning limits, but not two of three consecutive ones. R has one outside the upper warning limit, but the next two are within the 2 and 3 $\sigma$ limits.
+
+3. The third rule cannot be used, since 4 of 5 consecutive points are not beyond the $1 \sigma$ limits on either chart.
+
+4. Cannot find a portion of either chart with 8 consecutive points on one side of the center line.
+
+In addition, six points in a row are not steadily increasing/decreasing, and the patterns of both look random.
+
+Conclusion: The process looks to be in control.
+\vspace{2\baselineskip}
+
+Operating-Characteristic (OC) curves for $\bar x$ and R with three-sigma limits:
+\vspace{2\baselineskip}
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+qcc_xbar <- qcc(quality_group, type = "xbar", plot = FALSE)
+qcc_R <- qcc(quality_group, type = "R", plot = FALSE)
+
+# Generate and plot OC curve for X-bar chart
+oc_xbar <- oc.curves(qcc_xbar)
+plot(oc_xbar, 
+     main = "OC Curve for X-bar Chart",
+     xlab = "Shift in process mean (standard deviations)",
+     ylab = "Probability of not detecting shift (Type II error)")
+
+# Generate and plot OC curve for R chart
+oc_R <- oc.curves(qcc_R)
+plot(oc_R, 
+     main = "OC Curve for R Chart",
+     xlab = "Multiplier for process standard deviation (c)",
+     ylab = "Probability of not detecting change (Type II error)")
+```
+\vspace{2\baselineskip}
+
+*Process Capability*:
+The estimated natural tolerance limits are given by: $\bar x \pm 3s$ or $\approx (218, 410)$. We can estimate that approximately 99.73% of the dishes exiting this process will have a quality score between 218 and 410.
+
+The histogram and qqplot suggest the data follows a normal distribution. The process seems in control. So, we can use 6$\sigma$ to calculate the process capability. 
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+capability <- 6 * sd(dish_quality)
+capability
+```
+
+The process capability value comes out to 192.1076. It can be seen here that we can estimate process capability independently of the specifications on dish quality. Now to calculate the process-capability ratio:
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+process.capability(qcc(quality_group, "xbar"), c(LSL =
+250, USL = NA))
+```
+The one-sided lower process capability ratio is estimated by 0.662. Since strength is a safety-related parameter (and the ratio is less than 1), the process capability is inadequate. Process capability analysis Using designed experiments would be great, but unfortunately we only have one hobart machine. 
+\vspace{2\baselineskip}
+
+Tollgate:
+
+1. Limiting the number of defects and improving dish washing quality 
+
+2. The defect concentration map combined with the demerit system show that investigating the mentioned opportunities will have the desired outcome. The pareto chart put dishes as the second highest cumulative frequency, so targeting this machine will help that rating. 
+
+3. Yes, not all the possible opportunities will be evaluated in this project, simply due to the size of the machine and importance of it to the dining hall.
+
+4. The project is still on track, and I don't believe any additional resources are required for this step.
+
+### Improve
+DLG dish cleaning value stream map to provide an overview of an entire process, starting and finishing at the customer, and analyzing what is required to meet customer needs.
+\vspace{2\baselineskip}
+
+![DLG Dish Cleaning VSM](vsm.png)
+This map showed that placing the emptied dinnerware on the conveyor is a bottleneck, as was the unloading into the carts part. The other steps added value, so we know where to focus on (the machine). This, along with some parts from the previous steps explain how we got to the problem solution. 
+
+There is no evidence to indicate that the production of nonconforming units is operator-controllable. Engineering and/or management intervention will be required either to improve the process and eliminate the assignable causes. The objective of these interventions is to increase the process
+capability ratio to at least a minimum acceptable level. The control chart can be used as a monitoring device or logbook to show the effect of changes in the process on process performance.
+
+Another solution we came up with was to control the operators, but this would require extra effort and is not something that will help for certain.  
+
+Plans to implement the pilot test results on a full-scale basis: Dealt with with FDA, OSHA, and legal requirements, as well as employee training requirements.
+
+I can't see anything besides personnel concerns arising from the implementation, but the risk-management plan is to start off slow, and collaborate on a medium once a problem arises.
+
+Tollgate:
+1, 2, 4, and 5 answered
+
+No. 3 Could not be completed given the circumstances of the project
+
+### Control
+
+Out-of-control Machine Action Plan
+
+![Out-of-control Machine Action Plan](Out-of-control action plan.png)
+\vspace{2\baselineskip}
+
+This chart makes use of process engineering, as they are the ones who are able to help implement results to the machine. The chart asks some questions pertaining to the metrics of the machine, and provides the best way to go depending on the answer. This is especially important for my process owners (managers) as they are the ones who need to know about this and can give the green light. The transition plan for my managers will be received with a validation check several months later. The original results are still in place and stable so the positive financial impact will be sustained. 
+
+The new data using the revised process can be found in the appendix below. The new average was 333.79 and the standard deviation at 31.3985. So, both metrics improved. So did the process capability. This accomplishes the goals originally stated in this project.
+
+Tollgate:
+
+1. Data prior to and after the process implementation are in the appendix.
+
+2. The process control plan is complete, as are all the process monitoring procedures. 
+
+3. All essential documentaion is included herein.
+
+4. Summary of lessons learned: The dishroom process is very intricate, as is the process for determining quality. Taking samples was hard since working as unloader could get very stressful with the sheer amount. Each section of DMAIC requires careful visualization and explanation, which is something I hope I did. The most impactful visualizations for me were the defect concentration diagram and capability analysis. The last thing I learned was that improving a process is a combination of the evidence given by charts and what you think should be used. 
+
+5. Expand the item inventory to determine which one gets cleaned the best
+
+6. Which meal receives the most people, and how can we improve it?
+
+
+Below shows the improvements for each metric that I hope to implement to improve dish quality.
+\vspace{2\baselineskip}
+
+![Machine Improvement Metrics](IMG_4806.png)
+\vspace{2\baselineskip}
+
+## References
+PSTAT 140 Lecture Notes/Slides
+
+DLG Dining Hall
+
+https://www.hobartcorp.com/products/commercial-dishwashers/flight-type/ft1000e 
+
+Scrucca, L. (2017). QCC: Quality Control Charts. Retrieved from https://cran.r-project.org/web/packages/qcc/index.html 
+
+
+
+## Appendix
+
+```{r, echo=TRUE, eval=FALSE}
+library(dplyr)
+library(SixSigma)
+library(ggplot2)
+library(qicharts2)
+library(qcc)
+library(base)
+library(graphics)
+
+# Define process elements
+steps <- c("Place items on conveyor", "Retrieve items", "Stack in carts")
+inputs.overall <- c("Kitchenware", "Water", "Energy")
+outputs.overall <- "Clean Items"
+
+# Input-output relationships
+input.output <- list(
+  c("Dishes", "Various tools", "Utensils"),
+  c("Dish gloves", "Cleaned dishes"),
+  c("Cart", "Clean Dishes")
+)
+
+# Add parameter and feature to each step
+x.parameters <- list(
+  list(c("Operator", "C")),  # Added parameter for Step 1
+  list(c("Clean time", "P"), c("Water temperature", "C")),
+  list(c("Placement technique", "P"), c("Dinnerware size", "C"))
+)
+
+y.features <- list(
+  list(c("Materials ready", "Cr")),  # Added feature for Step 1
+  list(c("Hot", "Cr"), c("Clean", "Cr"), c("Correct arrangement", "Cr")),
+  list(c("Correct stack", "Cr"))
+)
+
+#SIPOC diagram
+ss.pMap(steps, inputs.overall, outputs.overall,
+        input.output, x.parameters, y.features,
+        sub = "DLG Dish Room Process")
+
+# Create a vector of the defects
+dlg_defects <- c(208,10,32,5,7,52,21,14,9) 
+#Vector of names of defects
+names(dlg_defects) <- c("noisy", "price", "tasteless", "freshness", "salty", 
+                        "dirty dishes", "wait", "atmosphere", 
+                        "small portions")
+#Create pareto chart
+pareto.chart(dlg_defects, 
+             ylab="frequency",
+             ylab2="cumulative percentage",
+             main="Pareto Chart for DLG Defects",
+             cumperc = seq(0,100, by=20))
+
+cause.and.effect(cause=list(machines=c("internal", "external", "extra play"),
+                            materials=c("supplier side", "handling"),
+                            methods=c("wrong work sequence", "planning", "materials handling"),
+                            measurement=c("Incorrect specs", "faulty gauge"),
+                            personnel=c("long hours", "insufficient training")),
+                 effect="Loss of Customers")
+
+dish_quality <- c(
+315, 247, 396, 330, 315, 250, 271, 315, 311, 328,
+255, 336, 367, 292, 304, 285, 226, 312, 298, 300,
+313, 324, 292, 310, 331, 296, 298, 321, 310, 315,
+357, 293, 308, 371, 344, 378, 313, 295, 324, 320,
+270, 281, 326, 278, 273, 346, 281, 351, 387, 348,
+318, 317, 350, 300, 310, 326, 384, 330, 300, 307,
+310, 331, 258, 349, 358, 314, 330, 324, 328, 260,
+284, 315, 237, 308, 285, 319, 315, 303, 304, 330,
+349, 264, 314, 317, 333, 285, 322, 337, 324, 319,
+265, 368, 321, 343, 327, 340, 333, 308, 325, 301)
+
+mean(dish_quality)
+sd(dish_quality)
+
+#check normality
+qqnorm(dish_quality, pch = 1, frame = FALSE)
+qqline(dish_quality, col = "steelblue", lwd = 2)
+
+#histogram 
+hist(dish_quality)
+
+#Shapiro-Wilk Test
+shapiro.test(dish_quality)
+
+quality_sample <- rep(1:20, rep(5, 20))
+quality_group <- qcc.groups(dish_quality, quality_sample)
+summary(qcc(quality_group, "xbar"))
+summary(qcc(quality_group, "R"))
+
+qcc_xbar <- qcc(quality_group, type = "xbar", plot = FALSE)
+qcc_R <- qcc(quality_group, type = "R", plot = FALSE)
+
+# Generate and plot OC curve for X-bar chart
+oc_xbar <- oc.curves(qcc_xbar)
+plot(oc_xbar, 
+     main = "OC Curve for X-bar Chart",
+     xlab = "Shift in process mean (standard deviations)",
+     ylab = "Probability of not detecting shift (Type II error)")
+
+# Generate and plot OC curve for R chart
+oc_R <- oc.curves(qcc_R)
+plot(oc_R, 
+     main = "OC Curve for R Chart",
+     xlab = "Multiplier for process standard deviation (c)",
+     ylab = "Probability of not detecting change (Type II error)")
+
+capability <- 6 * sd(dish_quality)
+capability
+
+process.capability(qcc(quality_group, "xbar"), c(LSL =
+250, USL = NA))
+
+dish_quality_new <- c(
+335, 267, 400, 350, 335, 270, 291, 335, 331, 348,
+275, 356, 387, 312, 324, 305, 246, 332, 318, 320,
+333, 344, 312, 330, 351, 316, 318, 341, 330, 335,
+377, 313, 328, 391, 364, 398, 333, 315, 344, 340,
+290, 301, 346, 298, 293, 366, 301, 371, 400, 368,
+338, 337, 370, 320, 330, 346, 400, 350, 320, 327,
+330, 351, 278, 369, 378, 334, 350, 344, 348, 280,
+304, 335, 257, 328, 305, 339, 335, 323, 324, 350,
+369, 284, 334, 337, 353, 305, 342, 357, 344, 339,
+285, 388, 341, 363, 347, 360, 353, 328, 345, 321)
+
+mean(dish_quality_new)
+sd(dish_quality_new)
+
+quality_sample2 <- rep(1:20, rep(5, 20))
+quality_group2 <- qcc.groups(dish_quality_new, quality_sample2)
+summary(qcc(quality_group2, "xbar"))
+summary(qcc(quality_group2, "R"))
+
+process.capability(qcc(quality_group, "xbar"), c(LSL =
+250, USL = NA))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
